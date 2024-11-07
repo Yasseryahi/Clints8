@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل العملاء</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h3, h4 {
+            color: #333;
+        }
+        input, select, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .search-result {
+            padding: 8px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .search-result:hover {
+            background-color: #c0c0c0;
+        }
+        .readonly {
+            background-color: #f3f3f3;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button id="search-client-btn">ابحث عن عميل</button>
+        <div id="search-area" style="display: none;">
+            <input type="text" id="client-search" placeholder="ادخل اسم العميل" oninput="searchClient()">
+            <div id="search-results"></div>
+            <button onclick="showAddClientForm()">+</button>
+        </div>
+        
+        <div id="add-client-form" style="display: none;">
+            <h3>إضافة عميل جديد</h3>
+            <input type="text" id="client-name" placeholder="اسم العميل">
+            <input type="text" id="captain-name" placeholder="اسم الكابتن">
+            <label>نوع الكورس:</label>
+            <select id="course-type">
+                <option value="She Can">She Can</option>
+                <option value="Premium Plus">Premium Plus</option>
+                <option value="Premium">Premium</option>
+                <option value="Gold">Gold</option>
+                <option value="Silver">Silver</option>
+                <option value="Bronze">Bronze</option>
+                <option value="Single Session">Single Session</option>
+            </select>
+            <label>هل العميل أول مرة يسوق؟</label>
+            <select id="first-time">
+                <option value="yes">نعم</option>
+                <option value="no">لا</option>
+            </select>
+            <button onclick="showTrainingForm()">استمرار</button>
+        </div>
+
+        <div id="client-data" style="display: none;">
+            <h3>بيانات العميل السابقة</h3>
+            <p>اسم العميل: <span id="client-name-display"></span></p>
+            <p>اسم الكابتن: <span id="captain-name-display"></span></p>
+            <p>نوع الكورس: <span id="course-type-display"></span></p>
+            <p>رقم آخر حصة: <span id="last-session-display"></span></p>
+            <div id="session-history" style="margin-top: 20px;">
+                <h4>سجل الحصص السابقة</h4>
+            </div>
+            <button onclick="startNewSession()">بدء حصة جديدة</button>
+        </div>
+
+        <div id="training-form" style="display: none;">
+            <h3 id="training-title">تفاصيل التدريب</h3>
+            <label>اسم الكابتن:</label>
+            <input type="text" id="session-captain-name" placeholder="اسم الكابتن">
+            <label>اختر رقم الحصة:</label>
+            <select id="session-number" onchange="showSessionForm()">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+            </select>
+            <div id="skills-area">
+                <!-- سيتم عرض النموذج المناسب هنا بناءً على الحصة -->
+            </div>
+            <label>ملاحظات:</label>
+            <textarea id="notes" rows="4" placeholder="أدخل ملاحظاتك هنا..."></textarea>
+            <label>الطرق:</label>
+            <textarea id="roads" rows="2" placeholder="أدخل الطرق التي مشيت فيها..."></textarea>
+            <button onclick="finishSession()">إنهاء الحصة</button>
+        </div>
+    </div>
+
+    <script>
+        let clients = JSON.parse(localStorage.getItem("clients")) || [];
+
+        document.getElementById("search-client-btn").onclick = function() {
+            document.getElementById("search-area").style.display = "block";
+        };
+
+        function showAddClientForm() {
+            document.getElementById("add-client-form").style.display = "block";
+        }
+
+        function showTrainingForm() {
+            let isFirstTime = document.getElementById("first-time").value;
+            document.getElementById("training-form").style.display = "block";
+            document.getElementById("training-title").innerText = isFirstTime === "yes" ? "نموذج أكاديمية ياسر يحيى لأول مرة" : "نموذج التقييم";
+            showSessionForm();
+        }
+
+        function showSessionForm() {
+            let sessionNumber = document.getElementById("session-number").value;
+            let skillsArea = document.getElementById("skills-area");
+            skillsArea.innerHTML = ""; 
+
+            if (sessionNumber == "1" && document.getElementById("first-time").value == "no") {
+                // نموذج تقييم مستوى العميل إذا كان العميل قد قاد من قبل
+                skillsArea.innerHTML = "<p>تقييم مستوى العميل: المهارات، التهدئة، التحكم، إلخ.</p>";
+            } else {
+                // نموذج بسيط من الحصة الثانية فصاعدًا
+                skillsArea.innerHTML = "<label>المهارة:</label><input type='text' id='skill' placeholder='أدخل المهارة'>";
+            }
+        }
+
+        function searchClient() {
+            let searchTerm = document.getElementById("client-search").value.toLowerCase();
+            let results = clients.filter(client => client.name.toLowerCase().startsWith(searchTerm));
+            let resultsDiv = document.getElementById("search-results");
+            resultsDiv.innerHTML = "";
+            results.forEach(client => {
+                let div = document.createElement("div");
+                div.classList.add("search-result");
+                div.textContent = client.name;
+                div.onclick = () => loadClientData(client);
+                resultsDiv.appendChild(div);
+            });
+        }
+
+        function loadClientData(client) {
+            document.getElementById("client-data").style.display = "block";
+            document.getElementById("client-name-display").innerText = client.name;
+            document.getElementById("captain-name-display").innerText = client.captain;
+            document.getElementById("course-type-display").innerText = client.courseType;
+
+            document.getElementById("last-session-display").innerText = client.lastSession;
+            let sessionHistoryDiv = document.getElementById("session-history");
+            sessionHistoryDiv.innerHTML = "";
+            client.sessions.forEach(session => {
+                let sessionDiv = document.createElement("div");
+                sessionDiv.innerHTML = `
+                    <p>رقم الحصة: ${session.session}</p>
+                    <p>التاريخ والوقت: ${session.datetime}</p>
+                    <p>الملاحظات: ${session.notes}</p>
+                    <p>الطرق: ${session.roads}</p>
+                    <hr>
+                `;
+                sessionHistoryDiv.appendChild(sessionDiv);
+            });
+        }
+
+        function startNewSession() {
+            let lastSession = parseInt(document.getElementById("last-session-display").innerText);
+            let newSession = lastSession + 1;
+
+            if (newSession > 13) {
+                alert("لقد أكمل العميل جميع الحصص.");
+                return;
+            }
+
+            document.getElementById("training-form").style.display = "block";
+            document.getElementById("client-data").style.display = "none";
+            document.getElementById("session-number").value = newSession;
+            showSessionForm();
+        }
+
+        function finishSession() {
+            submitData();
+            alert("تم إنهاء الحصة وإرسال البيانات بنجاح!");
+            document.getElementById("training-form").style.display = "none";
+            document.getElementById("client-data").style.display = "none";
+            document.getElementById("search-area").style.display = "block";
+        }
+
+        function submitData() {
+            let clientName = document.getElementById("client-name").value;
+            let captainName = document.getElementById("session-captain-name").value;
+            let courseType = document.getElementById("course-type").value;
+            let notes = document.getElementById("notes").value;
+            let roads = document.getElementById("roads").value;
+            let sessionNumber = document.getElementById("session-number").value;
+            let datetime = new Date().toLocaleString("ar-EG");
+
+            let sessionData = {
+                session: sessionNumber,
+                datetime: datetime,
+                notes: notes,
+                roads: roads
+            };
+
+            let existingClient = clients.find(client => client.name === clientName);
+            if (existingClient) {
+                existingClient.sessions.push(sessionData);
+                existingClient.lastSession = sessionNumber;
+            } else {
+                let newClient = {
+                    name: clientName,
+                    captain: captainName,
+                    courseType: courseType,
+                    sessions: [sessionData],
+                    lastSession: sessionNumber
+                };
+                clients.push(newClient);
+            }
+
+            localStorage.setItem("clients", JSON.stringify(clients));
+        }
+    </script>
+</body>
+</html>
